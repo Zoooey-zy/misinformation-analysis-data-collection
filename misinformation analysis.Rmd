@@ -1,0 +1,100 @@
+title: "misinformation analysis"
+output: word_document
+date: "2023-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Library
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(knitr)
+```
+
+
+## Data prepartion
+
+```{r}
+lul_d <- read_csv(
+  "life-under-lockdown-wave2-extract.csv",
+  col_types = cols(
+    col_integer(),
+    col_factor(),
+    col_factor(
+      levels = c(
+        "Nothing at all",
+        "Not very much",
+        "A fair amount",
+        "A great deal"
+      ),
+      ordered = TRUE),
+    col_integer()
+  ))
+```
+
+# Descriptive statistics
+
+## Gender
+```{r}
+lul_d %>%
+  ggplot(aes(x = gender)) +
+  geom_bar()
+```
+
+```{r}
+lul_d %>%
+  count(gender) %>%
+  kable
+```
+## Misinformation endorsement
+```{r}
+lul_d %>%
+  ggplot(aes(x = beliefs)) +
+  geom_histogram(binwidth = 1)
+```
+```{r}
+lul_d %>%
+  summarise(
+    n = n(),
+    Mdn = median(beliefs),
+    M = mean(beliefs),
+    SD = sd(beliefs)
+  ) %>%
+  kable(digits = 1)
+```
+# Analysis: misinformation beliefs by gender
+```{r}
+misbeliefs_by_gender <- lul_d %>%
+  group_by(gender) %>%
+  summarise(
+    n = n(),
+    Mdn = median(beliefs),
+    M = mean(beliefs),
+    SD = sd(beliefs)
+  ) 
+
+misbeliefs_by_gender %>%
+  kable
+```
+
+```{r}
+misbeliefs_by_gender %>%
+  ggplot(aes(x = gender, y = M)) +
+  geom_col()
+```
+```{r}
+lul_d %>%
+  filter(gender %in% c('Male', 'Female')) %>%
+  t.test(
+    formula = beliefs ~ gender,
+    var.equal = FALSE,
+    data = .
+  )
+```
+
+
