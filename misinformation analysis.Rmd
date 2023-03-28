@@ -20,8 +20,7 @@ library(knitr)
 ## Data prepartion
 
 ```{r}
-lul_d <- read_csv(
-  "life-under-lockdown-wave2-extract.csv",
+lul_d <- read_csv("C:/Users/97655/Desktop/Programming/life-under-lockdown-wave2-extract (1).csv",
   col_types = cols(
     col_integer(),
     col_factor(),
@@ -43,7 +42,8 @@ lul_d <- read_csv(
 ```{r}
 lul_d %>%
   ggplot(aes(x = gender)) +
-  geom_bar()
+  geom_bar() +
+  ggtitle('Gender of respondents')
 ```
 
 ```{r}
@@ -51,12 +51,45 @@ lul_d %>%
   count(gender) %>%
   kable
 ```
+## Use of Facebook as a source of knowledge about coronavirus
+```{r}
+lul_d %>%
+  ggplot(aes(x = know_facebook)) +
+  geom_bar() +
+  ggtitle('Please tell us how much of what you know about coronavirus,\nif anything, comes from Facebook')
+```
+# Visualise numeric variables
+## Age
+```{r}
+lul_d %>%
+  ggplot(aes(x = age)) +
+  geom_histogram(binwidth = 5) +
+  ggtitle('Age of respondents')
+```
+
 ## Misinformation endorsement
 ```{r}
 lul_d %>%
   ggplot(aes(x = beliefs)) +
-  geom_histogram(binwidth = 1)
+  geom_histogram(binwidth = 1)+
+  ggtitle('Number of misinformation beliefs about coronavirus')
 ```
+#How many of the following does each respondent consider 'true' (answer options: 'true', 'false', 'don't know'):
+
+##* Coronavirus was probably created in a laboratory					
+##* The symptoms that most people blame on coronavirus appear to be linked to 5G network radiation	
+##* There is no hard evidence that coronavirus really exists				
+##* The number of people reported as dying from coronavirus is being deliberately exaggerated by the authorities
+##* The current pandemic is part of a global effort to force everyone to be vaccinated whether they want to or not
+
+# Distribution of numeric variables
+## Age
+```{r}
+lul_d %>%
+  summarise(n = n(), Mdn = median(age), M = mean(age), SD = sd(age))
+```
+
+#Misinformation beliefs
 ```{r}
 lul_d %>%
   summarise(
@@ -95,6 +128,86 @@ lul_d %>%
     var.equal = FALSE,
     data = .
   )
+#data= . means use the data piped 
+```
+#More misinformation beliefs were held by men (M = 0.73, SD = 1.13) than by women (M = 0.61, SD = 1.05), but the difference is not statistically significant, t(494.31)=1.201, p = 0.23.
+
+## Misinformation beliefs by age
+```{r}
+lul_d %>%
+  ggplot(aes(x = age, y = beliefs)) +
+  geom_jitter()
+
+
 ```
 
+```{r}
+lul_d %>%
+  cor.test(
+    formula = ~ age + beliefs,
+    data = .,
+    method = 'pearson'
+  )
+```
+#Age was found to be negatively correlated with number of misinformation beliefs, r(498) = -.24, p < .001.
 
+## Misinformation beliefs by reliance on Facebook for information about coronavirus
+```{r}
+lul_d %>%
+  ggplot(aes(x = know_facebook, y = beliefs)) +
+  geom_boxplot()
+```
+# Analysis
+
+## Correlation
+```{r}
+lul_d %>%
+  select(know_facebook, beliefs) %>%
+  complete.cases %>%
+  sum
+
+lul_d %>%
+  cor.test(
+    formula = ~ as.numeric(know_facebook) + beliefs,
+    method = 'spearman',
+    exact = FALSE,
+    data = .
+  )
+```
+
+#The number of misinformation beliefs held by people in the sample was found to be positively correlated with the amount of knowledge of coronavirus that they said they obtained from Facebook, $r_s$(498) = .22, p < .001.
+
+
+## Linear modelling
+
+### Age vs endorsement of misinformation
+```{r}
+lul_d %>%
+  ggplot(aes(x = age, y = beliefs)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+```{r}
+lul_d %>%
+  lm(
+    formula = beliefs ~ age,
+    data = .
+  ) %>%
+  summary
+```
+
+### Age vs endorsement of misinformation, with controls for gender and informational reliance on Facebook
+```{r}
+lul_d %>%
+  filter(gender %in% c('Male', 'Female')) %>%
+  mutate(
+    female = as.numeric(gender == 'Female'),
+    facebook_none = as.numeric(know_facebook == 'Nothing at all')
+    ) %>%
+  lm(
+    formula = beliefs ~ age + female + facebook_none,
+    data = .
+  ) %>%
+  summary
+```
